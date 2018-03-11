@@ -101,7 +101,7 @@ def create_visitor_to_party_set():
             )
             invoice_idx +=1
 
-    visitor_to_parties
+    return VisitorToParty.objects.bulk_create(visitor_to_parties)
 
 
 print('Creating Clubs')

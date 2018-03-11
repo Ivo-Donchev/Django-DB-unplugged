@@ -1,8 +1,23 @@
 from django.db import models
+from decimal import Decimal
 
 
 class Club(models.Model):
     name = models.CharField(max_length=255)
+
+    @property
+    def first_party(self):
+        return self.parties.first()
+
+    @property
+    def last_party(self):
+        return self.parties.last()
+
+    @property
+    def average_income_per_party(self):
+        parties_count = self.parties.count()
+
+        return self.total_incomes / parties_count
 
     @property
     def parties_count(self):
@@ -10,12 +25,12 @@ class Club(models.Model):
 
     @property
     def total_incomes(self):
-        income = 0.0
+        income = Decimal(0.0)
 
         for party in self.parties.all():
             income += party.total_party_income
 
-        return income
+        return round(income, 2)
 
 class Visitor(models.Model):
     full_name = models.CharField(max_length=255)
@@ -27,11 +42,15 @@ class Party(models.Model):
     club = models.ForeignKey(Club, related_name='parties')
     visitors = models.ManyToManyField(Visitor, related_name='parties', through='VisitorToParty')
 
+    def __str__(self):
+        return self.name
+
+
     @property
     def invoices_count(self):
         count = 0
 
-        for vistortoparty_item in self.visitortoparty_set.all():
+        for visitortoparty_item in self.visitortoparty_set.all():
             if visitortoparty_item.invoice is not None:
                 count += 1
 
@@ -40,12 +59,12 @@ class Party(models.Model):
     @property
     def total_party_income(self):
         visitortoparty_set = self.visitortoparty_set.all()
-        income = 0.0
+        income = Decimal(0.0)
 
-        for vistortoparty_item in visitortoparty_set:
+        for visitortoparty_item in visitortoparty_set:
             income += visitortoparty_item.invoice_amount
 
-        return income
+        return round(income, 2)
 
 
 class VisitorToParty(models.Model):
@@ -61,7 +80,7 @@ class VisitorToParty(models.Model):
 
     @property
     def invoice_amount(self):
-        return self.invoice.amount
+        return Decimal(self.invoice.total_amount)
 
 
 class Invoice(models.Model):
@@ -72,17 +91,17 @@ class Invoice(models.Model):
     def details(self):
         if self.description:
             return self.description
-        return self.items.first().description
+        return self.rows.first().description
 
     @property
     def total_amount(self):
-        items = self.items.all()
-        amount = 0.0
+        rows = self.rows.all()
+        amount = Decimal(0.0)
 
-        for items in items:
-            amount += items.amount
+        for row in rows:
+            amount += row.amount
 
-        return amount
+        return Decimal(amount)
 
 
 class InvoiceRow(models.Model):
@@ -96,11 +115,11 @@ class InvoiceRow(models.Model):
 
     @property
     def amount(self):
-        without_tax = (self.quantity * self.unit_price)
+        without_tax = Decimal(self.quantity * self.unit_price)
 
         if self.tax_rate != 0:
-            tax = self.tax_rate
+            tax = Decimal(self.tax_rate)
         else:
-            tax = self.invoice.default_tax_rate
+            tax = Decimal(self.invoice.default_tax_rate)
 
-        return without_tax * (1 + tax)
+        return Decimal(without_tax * (1 + tax))
