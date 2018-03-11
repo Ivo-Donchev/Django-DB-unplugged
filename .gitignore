@@ -1,0 +1,6 @@
+# Vim
+*~
+*.swp
+*.swo
+db.sqlite3
+__pycache__
