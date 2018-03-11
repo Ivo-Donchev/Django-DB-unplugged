@@ -1,4 +1,7 @@
 import os
+import environ
+
+env = environ.Env()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -48,11 +51,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'django_db_unplugged.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+    'default': env.db('DATABASE_URL', default='postgres:///django_db_unplugged'),
 }
+
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
