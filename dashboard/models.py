@@ -23,6 +23,7 @@ class Visitor(models.Model):
 
 
 class Party(models.Model):
+    name = models.CharField(max_length=255)
     club = models.ForeignKey(Club, related_name='parties')
     visitors = models.ManyToManyField(Visitor, related_name='parties', through='VisitorToParty')
 
