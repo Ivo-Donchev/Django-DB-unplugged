@@ -84,7 +84,6 @@ class InvoiceRowListApi(ListAPIView):
             decimal_places=2
         )
         amount = serializers.DecimalField(
-            source='_amount',
             max_digits=10,
             decimal_places=2
         )
@@ -97,13 +96,12 @@ class InvoiceListApi(ListAPIView):
     queryset = Invoice.objects.collect()[:30]
 
     class Serializer(serializers.Serializer):
-        details = serializers.CharField(source='_description')
+        details = serializers.CharField()
         default_tax_rate = serializers.DecimalField(
             max_digits=10,
             decimal_places=2
         )
         total_amount = serializers.DecimalField(
-            source='_total_amount',
             max_digits=10,
             decimal_places=2
         )
@@ -117,7 +115,6 @@ class VisitorToPartyListApi(ListAPIView):
 
     class Serializer(serializers.Serializer):
         invoice_amount = serializers.DecimalField(
-            source='_invoice_amount',
             max_digits=10,
             decimal_places=2
         )
@@ -134,7 +131,7 @@ class PartyListApi(ListAPIView):
             max_digits=10,
             decimal_places=2
         )
-        invoices_count = serializers.IntegerField(source='_invoices_count')
+        invoices_count = serializers.IntegerField()
 
     def get_serializer_class(self):
         return PartyListApi.Serializer
