@@ -1,12 +1,18 @@
 from django.conf.urls import url
 from .views import (
-    DashboardListApi
+    ClubListApi,
+    InvoiceRowListApi,
 )
 
 urlpatters = [
     url(
-        regex=r'^list/api$',
-        view=DashboardListApi.as_view(),
-        name='list-api'
+        regex=r'^list/club$',
+        view=ClubListApi.as_view(),
+        name='club-list'
+    ),
+    url(
+        regex=r'^list/invoice-row$',
+        view=InvoiceRowListApi.as_view(),
+        name='invoice-row-list'
     ),
 ]

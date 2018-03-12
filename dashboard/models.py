@@ -167,6 +167,9 @@ class InvoiceRow(models.Model):
 
     @property
     def amount(self):
+        if hasattr(self, '_amount'):
+            return self._amount
+
         without_tax = self.amount_without_tax
 
         if self.tax_rate != 0:
