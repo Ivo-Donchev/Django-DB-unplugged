@@ -126,15 +126,16 @@ class VisitorToPartyListApi(ListAPIView):
         return VisitorToPartyListApi.Serializer
 
 class PartyListApi(ListAPIView):
-    queryset = Party.objects.all()[:30]
+    queryset = Party.objects.collect()[:30]
 
     class Serializer(serializers.Serializer):
         name = serializers.CharField()
         total_party_income = serializers.DecimalField(
+            source='_total_party_income',
             max_digits=10,
             decimal_places=2
         )
-        invoices_count = serializers.IntegerField()
+        invoices_count = serializers.IntegerField(source='_invoices_count')
 
     def get_serializer_class(self):
         return PartyListApi.Serializer

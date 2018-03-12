@@ -96,12 +96,30 @@ class VisitorToPartyQuerySet(QuerySet):
 
 
 class PartyQuerySet(QuerySet):
+    _invoices_count = lambda cls: Subquery(
+        cls.objects.filter(invoice__id__isnull=False,
+                           party__id=OuterRef('id'))
+                   .values('party__id')
+                   .annotate(asd=Count('id'))
+                   .values_list('asd')[:1],
+        output_field=models.IntegerField()
+    )
+    _invoice_amount = VisitorToPartyQuerySet._invoice_amount
+
+    _total_party_income = lambda cls, invoice_row_cls: Subquery(
+        cls.objects.filter(party__id=OuterRef('id'))
+                    .values('party__id')
+                    .annotate(asd=Sum(PartyQuerySet._invoice_amount(invoice_row_cls)))
+                    .values_list('asd')[:1],
+        output_field=models.DecimalField()
+    )
+
     def collect(self):
-        from .models import VisitorToParty
+        from .models import VisitorToParty, InvoiceRow
 
         private_fields = {
-            '_invoices_count': F('id'),  # TODO: This is not correct
-            '_total_party_income': F('id')  # TODO: Test it
+            '_invoices_count': self.__class__._invoices_count(VisitorToParty),
+            '_total_party_income': self.__class__._total_party_income(VisitorToParty, InvoiceRow)
         }
 
         return self.annotate(**private_fields)
