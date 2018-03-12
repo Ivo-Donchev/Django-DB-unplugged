@@ -42,7 +42,6 @@ class InvoiceRowQuerySet(QuerySet):
 
 
 class InvoiceQuerySet(QuerySet):
-
     __first_row_description_qs = lambda cls: Subquery(
         cls.objects.filter(invoice__id=OuterRef('id'))
                     .values_list('description')[:1],
@@ -55,10 +54,9 @@ class InvoiceQuerySet(QuerySet):
         output_field=models.CharField()
     )
 
-    _row_amount = InvoiceRowQuerySet._amount
     _total_amount = lambda cls : Subquery(
         cls.objects.values('invoice__id')
-                   .annotate(asd=Sum(InvoiceQuerySet._row_amount))
+                   .annotate(asd=Sum(InvoiceRowQuerySet._amount))
                    .filter(invoice__id=OuterRef('id'))
                    .values_list('asd')[:1],
         output_field=models.IntegerField()
@@ -76,10 +74,9 @@ class InvoiceQuerySet(QuerySet):
 
 
 class VisitorToPartyQuerySet(QuerySet):
-    _row_amount = InvoiceRowQuerySet._amount
     _invoice_amount = lambda cls: Subquery(
         cls.objects.values('invoice__id')
-                   .annotate(asd=Sum(VisitorToPartyQuerySet._row_amount))
+                   .annotate(asd=Sum(InvoiceRowQuerySet._amount))
                    .filter(invoice__id=OuterRef('invoice__id'))
                    .values_list('asd')[:1],
         output_field=models.IntegerField()
@@ -104,12 +101,11 @@ class PartyQuerySet(QuerySet):
                    .values_list('asd')[:1],
         output_field=models.IntegerField()
     )
-    _invoice_amount = VisitorToPartyQuerySet._invoice_amount
 
     _total_party_income = lambda cls, invoice_row_cls: Subquery(
         cls.objects.filter(party__id=OuterRef('id'))
                     .values('party__id')
-                    .annotate(asd=Sum(PartyQuerySet._invoice_amount(invoice_row_cls)))
+                    .annotate(asd=Sum(VisitorToPartyQuerySet._invoice_amount(invoice_row_cls)))
                     .values_list('asd')[:1],
         output_field=models.DecimalField()
     )

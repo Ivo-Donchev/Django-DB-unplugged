@@ -131,7 +131,6 @@ class PartyListApi(ListAPIView):
     class Serializer(serializers.Serializer):
         name = serializers.CharField()
         total_party_income = serializers.DecimalField(
-            source='_total_party_income',
             max_digits=10,
             decimal_places=2
         )
