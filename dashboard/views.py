@@ -7,9 +7,6 @@ from rest_framework import serializers
 from .models import Club
 
 
-class DashboardListView(View):
-    pass
-
 class DashboardListApi(ListAPIView):
     queryset = Club.objects\
         .collect()\
