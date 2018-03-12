@@ -1,6 +1,7 @@
 from django.conf.urls import url
 from .views import (
     ClubListApi,
+    PartyListApi,
     InvoiceListApi,
     InvoiceRowListApi,
     VisitorToPartyListApi,
@@ -16,6 +17,11 @@ urlpatters = [
         regex=r'^list/invoice$',
         view=InvoiceListApi.as_view(),
         name='invoice-list'
+    ),
+    url(
+        regex=r'^list/party$',
+        view=PartyListApi.as_view(),
+        name='party-list'
     ),
     url(
         regex=r'^list/invoice-row$',

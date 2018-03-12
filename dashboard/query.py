@@ -18,109 +18,78 @@ from django.db.models import (
 
 
 class InvoiceRowQuerySet(QuerySet):
+    __tax = Coalesce(
+        'tax_rate',
+        'invoice__default_tax_rate',
+        output_field=models.DecimalField(default=Decimal(0.0))
+    )
+    _amount_without_tax = ExpressionWrapper(
+        expression=F('quantity') * F('unit_price'),
+        output_field=models.DecimalField()
+    )
+    _amount = ExpressionWrapper(
+        expression=_amount_without_tax * (1 + __tax),
+        output_field=models.DecimalField(default=Decimal(0.0))
+    )
+
     def collect(self):
-        __tax = Coalesce(
-            'tax_rate',
-            'invoice__default_tax_rate',
-            output_field=models.DecimalField(default=Decimal(0.0))
-        )
-
-        _amount_without_tax = ExpressionWrapper(
-            expression=F('quantity') * F('unit_price'),
-            output_field=models.DecimalField()
-        )
-        _amount = ExpressionWrapper(
-            expression=_amount_without_tax * (1 + __tax),
-            output_field=models.DecimalField(default=Decimal(0.0))
-        )
-
         private_fields = {
-            '_amount_without_tax': _amount_without_tax,
-            '_amount': _amount
+            '_amount_without_tax': self.__class__._amount_without_tax,
+            '_amount': self.__class__._amount
         }
 
         return self.annotate(**private_fields)
 
 
 class InvoiceQuerySet(QuerySet):
+
+    __first_row_description_qs = lambda cls: Subquery(
+        cls.objects.filter(invoice__id=OuterRef('id'))
+                    .values_list('description')[:1],
+        output_field=models.CharField()
+    )
+    _description = lambda cls: Coalesce(
+        'description',
+        InvoiceQuerySet.__first_row_description_qs(cls),
+        default='',
+        output_field=models.CharField()
+    )
+
+    _row_amount = InvoiceRowQuerySet._amount
+    _total_amount = lambda cls : Subquery(
+        cls.objects.values('invoice__id')
+                   .annotate(asd=Sum(InvoiceQuerySet._row_amount))
+                   .filter(invoice__id=OuterRef('id'))
+                   .values_list('asd')[:1],
+        output_field=models.IntegerField()
+    )
+
     def collect(self):
         from .models import InvoiceRow
-        ########################## invoice row stuff
-        __tax = Coalesce(
-            'tax_rate',
-            'invoice__default_tax_rate',
-            output_field=models.DecimalField(default=Decimal(0.0))
-        )
-
-        _amount_without_tax = ExpressionWrapper(
-            expression=F('quantity') * F('unit_price'),
-            output_field=models.DecimalField()
-        )
-        _amount = ExpressionWrapper(
-            expression=_amount_without_tax * (1 + __tax),
-            output_field=models.DecimalField(default=Decimal(0.0))
-        )
-
-        ######################
-
-        __first_row_description_qs = Subquery(
-            InvoiceRow.objects.filter(invoice__id=OuterRef('id'))
-                              .values_list('description')[:1],
-            output_field=models.CharField()
-        )
-
-        _description = Coalesce(
-            'description',
-            __first_row_description_qs,
-            default='',
-            output_field=models.CharField()
-        )
-        _total_amount = Subquery(
-            InvoiceRow.objects.values('invoice__id')
-                              .annotate(asd=Sum(_amount))
-                              .filter(invoice__id=OuterRef('id'))
-                              .values_list('asd')[:1],
-            output_field=models.IntegerField()
-        )
 
         private_fields = {
-            '_description': _description,
-            '_total_amount': _total_amount
+            '_description': self.__class__._description(InvoiceRow),
+            '_total_amount': self.__class__._total_amount(InvoiceRow)
         }
 
         return self.annotate(**private_fields)
 
 
 class VisitorToPartyQuerySet(QuerySet):
+    _row_amount = InvoiceRowQuerySet._amount
+    _invoice_amount = lambda cls: Subquery(
+        cls.objects.values('invoice__id')
+                   .annotate(asd=Sum(VisitorToPartyQuerySet._row_amount))
+                   .filter(invoice__id=OuterRef('invoice__id'))
+                   .values_list('asd')[:1],
+        output_field=models.IntegerField()
+    )
+
     def collect(self):
         from .models import InvoiceRow
-        __tax = Coalesce(
-            'tax_rate',
-            'invoice__default_tax_rate',
-            output_field=models.DecimalField(default=Decimal(0.0))
-        )
-
-        _amount_without_tax = ExpressionWrapper(
-            expression=F('quantity') * F('unit_price'),
-            output_field=models.DecimalField()
-        )
-        _amount = ExpressionWrapper(
-            expression=_amount_without_tax * (1 + __tax),
-            output_field=models.DecimalField(default=Decimal(0.0))
-        )
-
-        ######################
-        _invoice_amount = Subquery(
-            InvoiceRow.objects.values('invoice__id')
-                              .annotate(asd=Sum(_amount))
-                              .filter(invoice__id=OuterRef('invoice__id'))
-                              .values_list('asd')[:1],
-            output_field=models.IntegerField()
-        )
-
 
         private_fields = {
-            '_invoice_amount': _invoice_amount,
+            '_invoice_amount': self.__class__._invoice_amount(InvoiceRow),
         }
 
         return self.annotate(**private_fields)
@@ -129,23 +98,10 @@ class VisitorToPartyQuerySet(QuerySet):
 class PartyQuerySet(QuerySet):
     def collect(self):
         from .models import VisitorToParty
-        __visitortoparty_set_grouped = VisitorToParty.objects.collect()\
-                                                             .filter(invoice__isnull=False,
-                                                                     party__id=OuterRef('id'))\
-                                                             .annotate(counts=Count('party__id'))
-
-        _invoices_count = Subquery(
-            __visitortoparty_set_grouped.values_list('counts')[:1],
-            output_field=models.IntegerField()
-        )
-        _total_party_income = Subquery(
-            __visitortoparty_set_grouped.values_list(Sum('_invoice_amount'))[:1],
-            output_field=models.PositiveIntegerField()
-        )
 
         private_fields = {
-            '_invoices_count': _invoices_count,  # TODO: This is not correct
-            '_total_party_income': _total_party_income  # TODO: Test it
+            '_invoices_count': F('id'),  # TODO: This is not correct
+            '_total_party_income': F('id')  # TODO: Test it
         }
 
         return self.annotate(**private_fields)

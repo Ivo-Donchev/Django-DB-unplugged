@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from .models import (
     Club,
+    Party,
     Invoice,
     InvoiceRow,
     VisitorToParty,
@@ -110,6 +111,7 @@ class InvoiceListApi(ListAPIView):
     def get_serializer_class(self):
         return InvoiceListApi.Serializer
 
+
 class VisitorToPartyListApi(ListAPIView):
     queryset = VisitorToParty.objects.collect()[:30]
 
@@ -122,3 +124,18 @@ class VisitorToPartyListApi(ListAPIView):
 
     def get_serializer_class(self):
         return VisitorToPartyListApi.Serializer
+
+class PartyListApi(ListAPIView):
+    queryset = Party.objects.all()[:30]
+
+    class Serializer(serializers.Serializer):
+        name = serializers.CharField()
+        total_party_income = serializers.DecimalField(
+            max_digits=10,
+            decimal_places=2
+        )
+        invoices_count = serializers.IntegerField()
+
+    def get_serializer_class(self):
+        return PartyListApi.Serializer
+
