@@ -181,6 +181,18 @@ class ClubQueryset(QuerySet):
         ),
         Value(0)
     )
+    _total_incomes = lambda *, Party, InvoiceRow, VisitorToParty: Coalesce(
+        Subquery(
+            Party.objects.filter(club__id=OuterRef('id'))
+                         .values('club__id')
+                         .annotate(asd=Sum(PartyQuerySet._total_party_income(
+                             InvoiceRow=InvoiceRow,
+                             VisitorToParty=VisitorToParty
+                          )))
+                         .values_list('asd')[:1],
+        ),
+        Value(0)
+    )
 
     def collect(self):
         from .models import Party, VisitorToParty, InvoiceRow
@@ -206,7 +218,13 @@ class ClubQueryset(QuerySet):
                 InvoiceRow=InvoiceRow,
                 VisitorToParty=VisitorToParty
             ),
-            '_parties_count': self.__class__._parties_count(Party=Party)
+            '_parties_count': self.__class__._parties_count(Party=Party),
+            '_total_incomes': self.__class__._total_incomes(
+                Party=Party,
+                InvoiceRow=InvoiceRow,
+                VisitorToParty=VisitorToParty
+            )
         }
+
 
         return self.annotate(**private_fields)

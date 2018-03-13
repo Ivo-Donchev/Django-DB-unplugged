@@ -21,6 +21,7 @@ class ClubListApi(ListAPIView):
             model = Club
             fields = (
                 'name',
+                'total_incomes',
                 'parties_count',
                 'average_income_per_party',
                 'first_party_name',
