@@ -50,7 +50,7 @@ class Club(models.Model):
         if hasattr(self, '_last_party_income'):
             return self._last_party_income
 
-        return self.first_party.total_party_income
+        return self.last_party.total_party_income
 
     @property
     def average_income_per_party(self):

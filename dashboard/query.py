@@ -4,6 +4,8 @@ from django.db import models
 from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from django.db.models import (
+    When,
+    Case,
     Count,
     Avg,
     Sum,
@@ -11,13 +13,14 @@ from django.db.models import (
     OuterRef,
     F,
     ExpressionWrapper,
+    Value,
 )
 
 
 class InvoiceRowQuerySet(QuerySet):
-    __tax = Coalesce(
-        'tax_rate',
-        'invoice__default_tax_rate',
+    __tax = Case(
+        When(tax_rate__gt=0.0, then=F('tax_rate')),
+        default=F('invoice__default_tax_rate'),
         output_field=models.DecimalField(default=Decimal(0.0))
     )
     _amount_without_tax = ExpressionWrapper(
@@ -91,12 +94,15 @@ class VisitorToPartyQuerySet(QuerySet):
 
 
 class PartyQuerySet(QuerySet):
-    _invoices_count = lambda *, VisitorToParty: Subquery(
-        VisitorToParty.objects.filter(invoice__id__isnull=False, party__id=OuterRef('id'))
-                              .values('party__id')
-                              .annotate(asd=Count('id'))
-                              .values_list('asd')[:1],
-        output_field=models.IntegerField()
+    _invoices_count = lambda *, VisitorToParty: Coalesce(
+        Subquery(
+            VisitorToParty.objects.filter(invoice__id__isnull=False, party__id=OuterRef('id'))
+                                  .values('party__id')
+                                  .annotate(asd=Count('id'))
+                                  .values_list('asd')[:1],
+            output_field=models.IntegerField()
+        ),
+        Value(0)
     )
 
     _total_party_income = lambda *, VisitorToParty, InvoiceRow: Subquery(
@@ -167,10 +173,13 @@ class ClubQueryset(QuerySet):
                      .values_list('asd')[:1],
         output_field=models.DecimalField()
     )
-    _parties_count = lambda *, Party: Subquery(
-        Party.objects.filter(club__id=OuterRef('id'))
-                     .values('club__id')
-                     .values_list(Count('id'))
+    _parties_count = lambda *, Party: Coalesce(
+        Subquery(
+            Party.objects.filter(club__id=OuterRef('id'))
+                         .values('club__id')
+                         .values_list(Count('id'))
+        ),
+        Value(0)
     )
 
     def collect(self):
