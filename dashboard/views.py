@@ -54,7 +54,7 @@ class InvoiceRowListApi(ListAPIView):
 
 
 class InvoiceListApi(ListAPIView):
-    queryset = Invoice.objects.collect()[:30]
+    queryset = Invoice.objects.collect()[:10]
 
     class Serializer(serializers.ModelSerializer):
         class Meta:
@@ -70,7 +70,7 @@ class InvoiceListApi(ListAPIView):
 
 
 class VisitorToPartyListApi(ListAPIView):
-    queryset = VisitorToParty.objects.collect()[:30]
+    queryset = VisitorToParty.objects.collect()[:10]
 
     class Serializer(serializers.ModelSerializer):
         class Meta:
@@ -84,7 +84,7 @@ class VisitorToPartyListApi(ListAPIView):
 
 
 class PartyListApi(ListAPIView):
-    queryset = Party.objects.collect()[:30]
+    queryset = Party.objects.collect()[:10]
 
     class Serializer(serializers.ModelSerializer):
         class Meta:
