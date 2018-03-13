@@ -14,47 +14,20 @@ from .models import (
 
 
 class ClubListApi(ListAPIView):
-    queryset = Club.objects\
-        .collect()\
-        .values(
-            'name',
-            '_parties_count',
-            '_average_income_per_party',
-            '_first_party_name',
-            '_first_party_income',
-            '_last_party_name',
-            '_last_party_income'
-        )[:10]
+    queryset = Club.objects.collect()[:10]
 
-    class Serializer(serializers.Serializer):
-        name = serializers.CharField()
-        parties_count = serializers.IntegerField(
-            source='_parties_count'
-        )
-
-        average_income_per_party = serializers.DecimalField(
-            source='_average_income_per_party',
-            max_digits=10,
-            decimal_places=2
-        )
-
-        first_party_name = serializers.CharField(
-            source='_first_party_name'
-        )
-        first_party_income = serializers.DecimalField(
-            source='_first_party_income',
-            max_digits=10,
-            decimal_places=2
-        )
-
-        last_party_name = serializers.CharField(
-            source='_last_party_name'
-        )
-        last_party_income = serializers.DecimalField(
-            source='_last_party_income',
-            max_digits=10,
-            decimal_places=2
-        )
+    class Serializer(serializers.ModelSerializer):
+        class Meta:
+            model = Club
+            fields = (
+                'name',
+                'parties_count',
+                'average_income_per_party',
+                'first_party_name',
+                'first_party_income',
+                'last_party_name',
+                'last_party_income',
+            )
 
     def get_serializer_class(self):
         return ClubListApi.Serializer
@@ -63,23 +36,17 @@ class ClubListApi(ListAPIView):
 class InvoiceRowListApi(ListAPIView):
     queryset = InvoiceRow.objects.collect()[:50]
 
-    class Serializer(serializers.Serializer):
-        invoice = serializers.IntegerField(source='invoice_id')
-        description = serializers.CharField()
-
-        tax_rate = serializers.DecimalField(
-            max_digits=10,
-            decimal_places=2
-        )
-        quantity = serializers.IntegerField()
-        unit_price = serializers.DecimalField(
-            max_digits=10,
-            decimal_places=2
-        )
-        amount = serializers.DecimalField(
-            max_digits=10,
-            decimal_places=2
-        )
+    class Serializer(serializers.ModelSerializer):
+        class Meta:
+            model = InvoiceRow
+            fields = (
+                'invoice_id',
+                'description',
+                'tax_rate',
+                'quantity',
+                'unit_price',
+                'amount'
+            )
 
     def get_serializer_class(self):
         return InvoiceRowListApi.Serializer
@@ -88,16 +55,14 @@ class InvoiceRowListApi(ListAPIView):
 class InvoiceListApi(ListAPIView):
     queryset = Invoice.objects.collect()[:30]
 
-    class Serializer(serializers.Serializer):
-        details = serializers.CharField()
-        default_tax_rate = serializers.DecimalField(
-            max_digits=10,
-            decimal_places=2
-        )
-        total_amount = serializers.DecimalField(
-            max_digits=10,
-            decimal_places=2
-        )
+    class Serializer(serializers.ModelSerializer):
+        class Meta:
+            model = Invoice
+            fields = (
+                'details',
+                'default_tax_rate',
+                'total_amount'
+            )
 
     def get_serializer_class(self):
         return InvoiceListApi.Serializer
@@ -106,11 +71,12 @@ class InvoiceListApi(ListAPIView):
 class VisitorToPartyListApi(ListAPIView):
     queryset = VisitorToParty.objects.collect()[:30]
 
-    class Serializer(serializers.Serializer):
-        invoice_amount = serializers.DecimalField(
-            max_digits=10,
-            decimal_places=2
-        )
+    class Serializer(serializers.ModelSerializer):
+        class Meta:
+            model = VisitorToParty
+            fields = (
+                'invoice_amount',
+            )
 
     def get_serializer_class(self):
         return VisitorToPartyListApi.Serializer
@@ -119,14 +85,14 @@ class VisitorToPartyListApi(ListAPIView):
 class PartyListApi(ListAPIView):
     queryset = Party.objects.collect()[:30]
 
-    class Serializer(serializers.Serializer):
-        name = serializers.CharField()
-        total_party_income = serializers.DecimalField(
-            max_digits=10,
-            decimal_places=2
-        )
-        invoices_count = serializers.IntegerField()
+    class Serializer(serializers.ModelSerializer):
+        class Meta:
+            model = Party
+            fields = (
+                'name',
+                'total_party_income',
+                'invoices_count'
+            )
 
     def get_serializer_class(self):
         return PartyListApi.Serializer
-

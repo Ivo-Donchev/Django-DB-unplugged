@@ -21,17 +21,43 @@ class Club(models.Model):
         return self.parties.first()
 
     @property
+    def first_party_income(self):
+        if hasattr(self, '_first_party_income'):
+            return self._first_party_income
+
+        return self.first_party.total_party_income
+
+    @property
+    def first_party_name(self):
+        if hasattr(self, '_first_party_name'):
+            return self._first_party_name
+
+        return self.first_party.name
+
+    @property
     def last_party(self):
         return self.parties.last()
+
+    @property
+    def last_party_name(self):
+        if hasattr(self, '_last_party_name'):
+            return self._last_party_name
+
+        return self.last_party.name
+
+    @property
+    def last_party_income(self):
+        if hasattr(self, '_last_party_income'):
+            return self._last_party_income
+
+        return self.first_party.total_party_income
 
     @property
     def average_income_per_party(self):
         if hasattr(self, '_average_income_per_party'):
             return self._average_income_per_party
 
-        parties_count = self.parties.count()
-
-        return self.total_incomes / parties_count
+        return self.total_incomes / self.parties_count
 
     @property
     def parties_count(self):
@@ -154,7 +180,11 @@ class InvoiceRow(models.Model):
 
     description = models.CharField(max_length=255)
 
-    tax_rate = models.DecimalField(default=0.0, decimal_places=2, max_digits=4) # if not set, get invoice's default
+    tax_rate = models.DecimalField(
+        default=0.0,
+        decimal_places=2,
+        max_digits=4
+    )
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(decimal_places=2, max_digits=4)
 

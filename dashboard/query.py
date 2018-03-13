@@ -5,6 +5,7 @@ from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from django.db.models import (
     Count,
+    Avg,
     Sum,
     Subquery,
     OuterRef,
@@ -43,13 +44,13 @@ class InvoiceQuerySet(QuerySet):
                           .values_list('description')[:1],
         output_field=models.CharField()
     )
+
     _description = lambda *, InvoiceRow: Coalesce(
         'description',
         InvoiceQuerySet.__first_row_description_qs(InvoiceRow=InvoiceRow),
         default='',
         output_field=models.CharField()
     )
-
     _total_amount = lambda *, InvoiceRow: Subquery(
         InvoiceRow.objects.values('invoice__id')
                           .annotate(asd=Sum(InvoiceRowQuerySet._amount))
@@ -91,8 +92,7 @@ class VisitorToPartyQuerySet(QuerySet):
 
 class PartyQuerySet(QuerySet):
     _invoices_count = lambda *, VisitorToParty: Subquery(
-        VisitorToParty.objects.filter(invoice__id__isnull=False,
-                                      party__id=OuterRef('id'))
+        VisitorToParty.objects.filter(invoice__id__isnull=False, party__id=OuterRef('id'))
                               .values('party__id')
                               .annotate(asd=Count('id'))
                               .values_list('asd')[:1],
@@ -122,58 +122,82 @@ class PartyQuerySet(QuerySet):
 
         return self.annotate(**private_fields)
 
+
 class ClubQueryset(QuerySet):
+    _first_party_name = lambda *, Party: Subquery(
+        Party.objects.filter(club__id=OuterRef('id'))
+                     .order_by('id')
+                     .values_list('name')[:1],
+        output_field=models.CharField()
+    )
+    _first_party_income = lambda *, Party, VisitorToParty, InvoiceRow: Subquery(
+        Party.objects.filter(club__id=OuterRef('id'))
+                     .order_by('id')
+                     .values('club__id')
+                     .values_list(PartyQuerySet._total_party_income(
+                         InvoiceRow=InvoiceRow,
+                         VisitorToParty=VisitorToParty
+                      ))[:1],
+        output_field=models.DecimalField()
+    )
+    _last_party_name = lambda *, Party: Subquery(
+        Party.objects.filter(club__id=OuterRef('id'))
+                     .order_by('-id')
+                     .values_list('name')[:1],
+        output_field=models.CharField()
+    )
+    _last_party_income = lambda *, Party, VisitorToParty, InvoiceRow: Subquery(
+        Party.objects.filter(club__id=OuterRef('id'))
+                     .order_by('-id')
+                     .values('club__id')
+                     .values_list(PartyQuerySet._total_party_income(
+                         InvoiceRow=InvoiceRow,
+                         VisitorToParty=VisitorToParty
+                      ))[:1],
+        output_field=models.DecimalField()
+    )
+
+    _average_income_per_party = lambda *, Party, InvoiceRow, VisitorToParty: Subquery(
+        Party.objects.filter(club__id=OuterRef('id'))
+                     .values('club__id')
+                     .annotate(asd=Avg(PartyQuerySet._total_party_income(
+                         InvoiceRow=InvoiceRow,
+                         VisitorToParty=VisitorToParty
+                      )))
+                     .values_list('asd')[:1],
+        output_field=models.DecimalField()
+    )
+    _parties_count = lambda *, Party: Subquery(
+        Party.objects.filter(club__id=OuterRef('id'))
+                     .values('club__id')
+                     .values_list(Count('id'))
+    )
+
     def collect(self):
-        from .models import Party
-        __parties = Party.objects.annotate(group_by_clause=Count('club__id'))\
-                                 .filter(club__id=OuterRef('id'))
-        _first_party_name = Subquery(
-            Party.objects.filter(club__id=OuterRef('id'))\
-                         .order_by('id')\
-                         .values_list('name')[:1],
-            output_field=models.CharField()
-        )
-        _first_party_income = Subquery(
-            Party.objects.filter(club__id=OuterRef('id'))\
-                        .collect()\
-                        .order_by('id')\
-                        .values_list('_total_party_income')[:1]
-        )
-
-        _last_party_name = Subquery(
-            Party.objects.filter(club__id=OuterRef('id'))\
-                         .order_by('-id')\
-                         .values_list('name')[:1],
-            output_field=models.CharField()
-        )
-        _last_party_income = Subquery(
-            Party.objects.filter(club__id=OuterRef('id'))\
-                         .collect()\
-                         .order_by('-id')\
-                         .values_list('_total_party_income')[:1]
-        )
-
-        _total_incomes = Subquery(
-            __parties.collect().values_list(Sum('_total_party_income'))[:1],
-            output_field=models.DecimalField()
-        )
-        _parties_count = Subquery(
-            __parties.values_list('group_by_clause')[:1],
-            output_field=models.DecimalField()
-        )
-        _average_income_per_party = ExpressionWrapper(
-            _total_incomes / _parties_count,
-            output_field = models.DecimalField()
-        )
-
+        from .models import Party, VisitorToParty, InvoiceRow
         private_fields = {
-            '_parties_count': _parties_count,
-            '_total_incomes': _total_incomes,
-            '_average_income_per_party': _average_income_per_party,
-            '_first_party_name': _first_party_name,
-            '_first_party_income': _first_party_income,
-            '_last_party_name': _last_party_name,
-            '_last_party_income': _last_party_income,
+            '_first_party_name': self.__class__._first_party_name(
+                Party=Party
+            ),
+            '_first_party_income': self.__class__._first_party_income(
+                Party=Party,
+                VisitorToParty=VisitorToParty,
+                InvoiceRow=InvoiceRow
+            ),
+            '_last_party_name': self.__class__._last_party_name(
+                Party=Party
+            ),
+            '_last_party_income': self.__class__._last_party_income(
+                Party=Party,
+                VisitorToParty=VisitorToParty,
+                InvoiceRow=InvoiceRow
+            ),
+            '_average_income_per_party': self.__class__._average_income_per_party(
+                Party=Party,
+                InvoiceRow=InvoiceRow,
+                VisitorToParty=VisitorToParty
+            ),
+            '_parties_count': self.__class__._parties_count(Party=Party)
         }
 
-        return  self.annotate(**private_fields)
+        return self.annotate(**private_fields)
