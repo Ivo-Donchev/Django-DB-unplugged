@@ -61,17 +61,10 @@ class ClubListApi(ListAPIView):
 
 
 class InvoiceRowListApi(ListAPIView):
-    queryset = InvoiceRow.objects.collect().values(
-        'invoice__id',
-        'description',
-        'tax_rate',
-        'quantity',
-        'unit_price',
-        '_amount'
-    )[:50]
+    queryset = InvoiceRow.objects.collect()[:50]
 
     class Serializer(serializers.Serializer):
-        invoice = serializers.IntegerField(source='invoice__id')
+        invoice = serializers.IntegerField(source='invoice_id')
         description = serializers.CharField()
 
         tax_rate = serializers.DecimalField(
@@ -121,6 +114,7 @@ class VisitorToPartyListApi(ListAPIView):
 
     def get_serializer_class(self):
         return VisitorToPartyListApi.Serializer
+
 
 class PartyListApi(ListAPIView):
     queryset = Party.objects.collect()[:30]

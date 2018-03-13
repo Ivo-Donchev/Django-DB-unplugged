@@ -9,27 +9,27 @@ from .views import (
 
 urlpatters = [
     url(
-        regex=r'^list/club$',
+        regex=r'^list/club/$',
         view=ClubListApi.as_view(),
         name='club-list'
     ),
     url(
-        regex=r'^list/invoice$',
+        regex=r'^list/invoice/$',
         view=InvoiceListApi.as_view(),
         name='invoice-list'
     ),
     url(
-        regex=r'^list/party$',
+        regex=r'^list/party/$',
         view=PartyListApi.as_view(),
         name='party-list'
     ),
     url(
-        regex=r'^list/invoice-row$',
+        regex=r'^list/invoice-row/$',
         view=InvoiceRowListApi.as_view(),
         name='invoice-row-list'
     ),
     url(
-        regex=r'^list/visitor-to-party$',
+        regex=r'^list/visitor-to-party/$',
         view=VisitorToPartyListApi.as_view(),
         name='visitor-to-party-list'
     ),

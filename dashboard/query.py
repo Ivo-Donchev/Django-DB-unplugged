@@ -4,16 +4,12 @@ from django.db import models
 from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from django.db.models import (
-    Case,
     Count,
-    When,
-    Q,
     Sum,
     Subquery,
     OuterRef,
     F,
     ExpressionWrapper,
-    Value,
 )
 
 
@@ -42,23 +38,23 @@ class InvoiceRowQuerySet(QuerySet):
 
 
 class InvoiceQuerySet(QuerySet):
-    __first_row_description_qs = lambda cls: Subquery(
-        cls.objects.filter(invoice__id=OuterRef('id'))
-                    .values_list('description')[:1],
+    __first_row_description_qs = lambda *, InvoiceRow: Subquery(
+        InvoiceRow.objects.filter(invoice__id=OuterRef('id'))
+                          .values_list('description')[:1],
         output_field=models.CharField()
     )
-    _description = lambda cls: Coalesce(
+    _description = lambda *, InvoiceRow: Coalesce(
         'description',
-        InvoiceQuerySet.__first_row_description_qs(cls),
+        InvoiceQuerySet.__first_row_description_qs(InvoiceRow=InvoiceRow),
         default='',
         output_field=models.CharField()
     )
 
-    _total_amount = lambda cls : Subquery(
-        cls.objects.values('invoice__id')
-                   .annotate(asd=Sum(InvoiceRowQuerySet._amount))
-                   .filter(invoice__id=OuterRef('id'))
-                   .values_list('asd')[:1],
+    _total_amount = lambda *, InvoiceRow: Subquery(
+        InvoiceRow.objects.values('invoice__id')
+                          .annotate(asd=Sum(InvoiceRowQuerySet._amount))
+                          .filter(invoice__id=OuterRef('id'))
+                          .values_list('asd')[:1],
         output_field=models.IntegerField()
     )
 
@@ -66,19 +62,19 @@ class InvoiceQuerySet(QuerySet):
         from .models import InvoiceRow
 
         private_fields = {
-            '_description': self.__class__._description(InvoiceRow),
-            '_total_amount': self.__class__._total_amount(InvoiceRow)
+            '_description': self.__class__._description(InvoiceRow=InvoiceRow),
+            '_total_amount': self.__class__._total_amount(InvoiceRow=InvoiceRow)
         }
 
         return self.annotate(**private_fields)
 
 
 class VisitorToPartyQuerySet(QuerySet):
-    _invoice_amount = lambda cls: Subquery(
-        cls.objects.values('invoice__id')
-                   .annotate(asd=Sum(InvoiceRowQuerySet._amount))
-                   .filter(invoice__id=OuterRef('invoice__id'))
-                   .values_list('asd')[:1],
+    _invoice_amount = lambda *, InvoiceRow: Subquery(
+        InvoiceRow.objects.values('invoice__id')
+                          .annotate(asd=Sum(InvoiceRowQuerySet._amount))
+                          .filter(invoice__id=OuterRef('invoice__id'))
+                          .values_list('asd')[:1],
         output_field=models.IntegerField()
     )
 
@@ -86,27 +82,28 @@ class VisitorToPartyQuerySet(QuerySet):
         from .models import InvoiceRow
 
         private_fields = {
-            '_invoice_amount': self.__class__._invoice_amount(InvoiceRow),
+            '_invoice_amount': self.__class__._invoice_amount(InvoiceRow=InvoiceRow),
         }
 
         return self.annotate(**private_fields)
 
 
+
 class PartyQuerySet(QuerySet):
-    _invoices_count = lambda cls: Subquery(
-        cls.objects.filter(invoice__id__isnull=False,
-                           party__id=OuterRef('id'))
-                   .values('party__id')
-                   .annotate(asd=Count('id'))
-                   .values_list('asd')[:1],
+    _invoices_count = lambda *, VisitorToParty: Subquery(
+        VisitorToParty.objects.filter(invoice__id__isnull=False,
+                                      party__id=OuterRef('id'))
+                              .values('party__id')
+                              .annotate(asd=Count('id'))
+                              .values_list('asd')[:1],
         output_field=models.IntegerField()
     )
 
-    _total_party_income = lambda cls, invoice_row_cls: Subquery(
-        cls.objects.filter(party__id=OuterRef('id'))
-                    .values('party__id')
-                    .annotate(asd=Sum(VisitorToPartyQuerySet._invoice_amount(invoice_row_cls)))
-                    .values_list('asd')[:1],
+    _total_party_income = lambda *, VisitorToParty, InvoiceRow: Subquery(
+        VisitorToParty.objects.filter(party__id=OuterRef('id'))
+                              .values('party__id')
+                              .annotate(asd=Sum(VisitorToPartyQuerySet._invoice_amount(InvoiceRow=InvoiceRow)))
+                              .values_list('asd')[:1],
         output_field=models.DecimalField()
     )
 
@@ -114,8 +111,13 @@ class PartyQuerySet(QuerySet):
         from .models import VisitorToParty, InvoiceRow
 
         private_fields = {
-            '_invoices_count': self.__class__._invoices_count(VisitorToParty),
-            '_total_party_income': self.__class__._total_party_income(VisitorToParty, InvoiceRow)
+            '_invoices_count': self.__class__._invoices_count(
+                VisitorToParty=VisitorToParty
+            ),
+            '_total_party_income': self.__class__._total_party_income(
+                VisitorToParty=VisitorToParty,
+                InvoiceRow=InvoiceRow
+            )
         }
 
         return self.annotate(**private_fields)
