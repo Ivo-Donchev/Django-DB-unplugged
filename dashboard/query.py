@@ -138,7 +138,7 @@ class ClubQueryset(QuerySet):
                      .values_list(PartyQuerySet._total_party_income(
                          InvoiceRow=InvoiceRow,
                          VisitorToParty=VisitorToParty
-                      ))[:1],
+                     ))[:1],
         output_field=models.DecimalField()
     )
     _last_party_name = lambda *, Party: Subquery(
@@ -152,7 +152,7 @@ class ClubQueryset(QuerySet):
                      .values_list(PartyQuerySet._total_party_income(
                          InvoiceRow=InvoiceRow,
                          VisitorToParty=VisitorToParty
-                      ))[:1],
+                     ))[:1],
         output_field=models.DecimalField()
     )
 
@@ -162,7 +162,7 @@ class ClubQueryset(QuerySet):
                      .values_list(Avg(PartyQuerySet._total_party_income(
                          InvoiceRow=InvoiceRow,
                          VisitorToParty=VisitorToParty
-                      )))[:1],
+                     )))[:1],
         output_field=models.DecimalField()
     )
     _parties_count = lambda *, Party: Coalesce(
@@ -180,7 +180,7 @@ class ClubQueryset(QuerySet):
                          .values_list(Sum(PartyQuerySet._total_party_income(
                              InvoiceRow=InvoiceRow,
                              VisitorToParty=VisitorToParty
-                          )))[:1],
+                         )))[:1],
         ),
         Value(0)
     )
