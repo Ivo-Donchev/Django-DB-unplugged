@@ -86,6 +86,7 @@ def create_invoices_with_rows(parties, visitors):
 
     return invoices
 
+
 def create_visitor_to_party_set():
     invoices = list(Invoice.objects.all())
     parties = list(Party.objects.all())
@@ -99,7 +100,7 @@ def create_visitor_to_party_set():
             visitor_to_parties.append(
                 VisitorToParty(visitor=visitor, party=party, invoice=invoices[invoice_idx])
             )
-            invoice_idx +=1
+            invoice_idx += 1
 
     return VisitorToParty.objects.bulk_create(visitor_to_parties)
 

@@ -94,7 +94,6 @@ class Party(models.Model):
     def __str__(self):
         return self.name
 
-
     @property
     def invoices_count(self):
         if hasattr(self, '_invoices_count'):

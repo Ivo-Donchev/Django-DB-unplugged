@@ -90,7 +90,6 @@ class VisitorToPartyQuerySet(QuerySet):
         return self.annotate(**private_fields)
 
 
-
 class PartyQuerySet(QuerySet):
     _invoices_count = lambda *, VisitorToParty: Coalesce(
         Subquery(
@@ -143,9 +142,7 @@ class ClubQueryset(QuerySet):
         output_field=models.DecimalField()
     )
     _last_party_name = lambda *, Party: Subquery(
-        Party.objects.filter(club__id=OuterRef('id'))
-                     .order_by('-id')
-                     .values_list('name')[:1],
+        Party.objects.filter(club__id=OuterRef('id')).order_by('-id').values_list('name')[:1],
         output_field=models.CharField()
     )
     _last_party_income = lambda *, Party, VisitorToParty, InvoiceRow: Subquery(
@@ -219,6 +216,5 @@ class ClubQueryset(QuerySet):
                 VisitorToParty=VisitorToParty
             )
         }
-
 
         return self.annotate(**private_fields)

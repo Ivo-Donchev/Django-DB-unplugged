@@ -191,7 +191,7 @@ class VisitorToPartyTests(TestCase):
 class PartyTests(TestCase):
     def test_invoices_count_if_no_invoices_exists(self):
         club = Club.objects.create(name='Versai')
-        created_party=Party.objects.create(
+        created_party = Party.objects.create(
             name='Boro',
             club=club,
         )
@@ -203,7 +203,7 @@ class PartyTests(TestCase):
 
     def test_invoices_count(self):
         club = Club.objects.create(name='Versai')
-        created_party=Party.objects.create(
+        created_party = Party.objects.create(
             name='Boro',
             club=club,
         )
@@ -232,10 +232,9 @@ class PartyTests(TestCase):
         party = Party.objects.collect().get(id=created_party.id)
         self.assertEqual(2, party.invoices_count)
 
-
     def test_total_party_income(self):
         club = Club.objects.create(name='Versai')
-        created_party=Party.objects.create(
+        created_party = Party.objects.create(
             name='Boro',
             club=club,
         )

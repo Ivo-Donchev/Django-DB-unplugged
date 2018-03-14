@@ -9,7 +9,7 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(
         regex=r'^dashboard/',
-        view = include(
+        view=include(
             arg=dashboard_patterns,
             namespace='dashboard'
         ),
