@@ -55,10 +55,9 @@ class InvoiceQuerySet(QuerySet):
         output_field=models.CharField()
     )
     _total_amount = lambda *, InvoiceRow: Subquery(
-        InvoiceRow.objects.values('invoice__id')
-                          .annotate(asd=Sum(InvoiceRowQuerySet._amount))
-                          .filter(invoice__id=OuterRef('id'))
-                          .values_list('asd')[:1],
+        InvoiceRow.objects.filter(invoice__id=OuterRef('id'))
+                          .values('invoice__id')
+                          .values_list(Sum(InvoiceRowQuerySet._amount))[:1],
         output_field=models.IntegerField()
     )
 
@@ -75,10 +74,9 @@ class InvoiceQuerySet(QuerySet):
 
 class VisitorToPartyQuerySet(QuerySet):
     _invoice_amount = lambda *, InvoiceRow: Subquery(
-        InvoiceRow.objects.values('invoice__id')
-                          .annotate(asd=Sum(InvoiceRowQuerySet._amount))
-                          .filter(invoice__id=OuterRef('invoice__id'))
-                          .values_list('asd')[:1],
+        InvoiceRow.objects.filter(invoice__id=OuterRef('invoice__id'))
+                          .values('invoice__id')
+                          .values_list(Sum(InvoiceRowQuerySet._amount))[:1],
         output_field=models.IntegerField()
     )
 
@@ -98,8 +96,7 @@ class PartyQuerySet(QuerySet):
         Subquery(
             VisitorToParty.objects.filter(invoice__id__isnull=False, party__id=OuterRef('id'))
                                   .values('party__id')
-                                  .annotate(asd=Count('id'))
-                                  .values_list('asd')[:1],
+                                  .values_list(Count('id'))[:1],
             output_field=models.IntegerField()
         ),
         Value(0)
@@ -108,8 +105,7 @@ class PartyQuerySet(QuerySet):
     _total_party_income = lambda *, VisitorToParty, InvoiceRow: Subquery(
         VisitorToParty.objects.filter(party__id=OuterRef('id'))
                               .values('party__id')
-                              .annotate(asd=Sum(VisitorToPartyQuerySet._invoice_amount(InvoiceRow=InvoiceRow)))
-                              .values_list('asd')[:1],
+                              .values_list(Sum(VisitorToPartyQuerySet._invoice_amount(InvoiceRow=InvoiceRow)))[:1],
         output_field=models.DecimalField()
     )
 
@@ -166,11 +162,10 @@ class ClubQueryset(QuerySet):
     _average_income_per_party = lambda *, Party, InvoiceRow, VisitorToParty: Subquery(
         Party.objects.filter(club__id=OuterRef('id'))
                      .values('club__id')
-                     .annotate(asd=Avg(PartyQuerySet._total_party_income(
+                     .values_list(Avg(PartyQuerySet._total_party_income(
                          InvoiceRow=InvoiceRow,
                          VisitorToParty=VisitorToParty
-                      )))
-                     .values_list('asd')[:1],
+                      )))[:1],
         output_field=models.DecimalField()
     )
     _parties_count = lambda *, Party: Coalesce(
@@ -185,11 +180,10 @@ class ClubQueryset(QuerySet):
         Subquery(
             Party.objects.filter(club__id=OuterRef('id'))
                          .values('club__id')
-                         .annotate(asd=Sum(PartyQuerySet._total_party_income(
+                         .values_list(Sum(PartyQuerySet._total_party_income(
                              InvoiceRow=InvoiceRow,
                              VisitorToParty=VisitorToParty
-                          )))
-                         .values_list('asd')[:1],
+                          )))[:1],
         ),
         Value(0)
     )
